@@ -1,44 +1,41 @@
-// api/tiqets/search.js
-// Vercel Serverless Function (Node.js)
+// Vercel Serverless Function: /api/tiqets/search
+// Accepts: q, city, country, lat, lng, radius, page, per_page, date, categories, tags
+// Passes through to Tiqets /v2/products and returns JSON.
 
 module.exports = async (req, res) => {
-// --- CORS ---
-const origin = req.headers.origin || '';
-const ALLOW = [
-'https://myroamy.com',
-'https://www.myroamy.com',
-'https://*.vercel.app',
-'http://localhost:3000'
-];
-const allowed = ALLOW.some(p =>
-p.includes('*')
-? new RegExp('^' + p.replace('*', '.*') + '$').test(origin)
-: p === origin
-);
-if (allowed) {
-res.setHeader('Access-Control-Allow-Origin', origin);
-}
-res.setHeader('Vary', 'Origin');
+// CORS: allow only your production domain (adjust for preview if needed)
+res.setHeader('Access-Control-Allow-Origin', 'https://myroamy.com');
 res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-res.setHeader('Access-Control-Max-Age', '86400');
-if (req.method === 'OPTIONS') return res.status(204).end();
+res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+if (req.method === 'OPTIONS') return res.status(200).end();
 
-// Build Tiqets query
-const { q, city, country, lat, lng, radius, page } = req.query || {};
-const per_page = req.query.per_page || req.query.size;
+const {
+q, city, country, lat, lng, radius,
+page, per_page, date, categories, tags, language
+} = req.query || {};
 
 const params = new URLSearchParams();
+
+// Tiqets field names
 if (q) params.set('query', q);
 if (city) params.set('city', city);
 if (country) params.set('country', country);
+if (date) params.set('date', date);
+if (categories) params.set('categories', categories); // comma-separated
+if (tags) params.set('tags', tags); // comma-separated
+
 if (lat && lng) {
 params.set('lat', lat);
 params.set('lng', lng);
-if (radius) params.set('radius', radius);
+if (radius) params.set('radius', radius); // meters
 }
-if (page) params.set('page', page);
-if (per_page) params.set('per_page', per_page);
+
+// Pagination (defaults)
+params.set('page', String(page ?? 0));
+params.set('per_page', String(per_page ?? 20));
+
+// Language hint (optional, improves returned copy)
+const acceptLang = language || 'en';
 
 const url = `https://api.tiqets.com/v2/products?${params.toString()}`;
 
@@ -46,18 +43,17 @@ try {
 const r = await fetch(url, {
 headers: {
 Accept: 'application/json',
+'Accept-Language': acceptLang,
 'User-Agent': 'myroamy-proxy/1.0',
 Authorization: `Token ${process.env.TIQETS_API_KEY}`
 }
 });
 
 const text = await r.text();
-res
-.status(r.status)
+res.status(r.status)
 .setHeader('Content-Type', 'application/json')
 .send(text);
 } catch (err) {
-console.error('Tiqets proxy error:', err);
 res.status(500).json({
 error: 'proxy_failed',
 message: err?.message || 'Unknown error'
