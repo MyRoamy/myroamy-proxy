@@ -3,7 +3,7 @@
 
 module.exports = async (req, res) => {
   // --- CORS: during testing you can use "*" then lock to your domain ---
-  res.setHeader('Access-Control-Allow-Origin', '*'); // change to "https://myroamy.com" when live
+  res.setHeader('Access-Control-Allow-Origin', 'https://myroamy.com'); // change to "https://myroamy.com" when live
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
